@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"net/http"
+	"os"
 )
 
 import "fmt"
@@ -17,6 +18,7 @@ func main() {
 	resp, err := http.Get(request.String())
 	if err != nil {
 		fmt.Printf("Whoops!")
+		os.Exit(1)
 	}
 	if resp.StatusCode == 200 {
 		fmt.Println("Success!")
