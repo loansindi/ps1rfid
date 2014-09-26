@@ -9,6 +9,7 @@ import "fmt"
 
 func main() {
 	var code string
+	fmt.Print("Enter code: ")
 	fmt.Scanf("%s", &code)
 	var request bytes.Buffer
 	request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
