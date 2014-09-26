@@ -17,7 +17,8 @@ func main() {
 	request.WriteString(code)
 	resp, err := http.Get(request.String())
 	if err != nil {
-		fmt.Printf("Whoops!")
+		fmt.Println("Whoops!")
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	if resp.StatusCode == 200 {
