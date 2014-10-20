@@ -8,8 +8,11 @@ import (
 
 import "fmt"
 
+var code string
+
 func main() {
-	var code string
+	go http.HandleFunc("/", displayCode)
+	go http.ListenAndServe(":8080", nil)
 	for {
 		fmt.Print("Enter code: ")
 		fmt.Scanf("%s", &code)
@@ -23,6 +26,7 @@ func main() {
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
+			code = ""
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
 		} else {
@@ -30,4 +34,8 @@ func main() {
 		}
 	}
 
+}
+
+func displayCode(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(code))
 }
