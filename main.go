@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	//	"github.com/mrmorphic/hwio"
 	"github.com/tarm/goserial"
 	"net/http"
 	"os"
@@ -32,14 +31,12 @@ func main() {
 		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 		request.WriteString(code)
 		resp, err := http.Get(request.String())
-		// defer hwio.CloseAll()
 		if err != nil {
 			fmt.Printf("Whoops!")
 			os.Exit(1)
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
-			//go openDoor()
 			code = ""
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
@@ -53,16 +50,3 @@ func main() {
 func displayCode(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(code))
 }
-
-/*
-func openDoor() {
-	strikePlate, err := hwio.GetPinWithMode("P9.11", hwio.OUTPUT)
-	if err != nil {
-		os.Exit(1)
-	}
-	hwio.DigitalWrite(strikePlate, hwio.HIGH)
-	hwio.Delay(500)
-	hwio.DigitalWrite(strikePlate, hwio.LOW)
-	hwio.ClosePin(strikePlate)
-}
-*/
