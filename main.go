@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-var code string
+var code string = "sup"
 
 func main() {
 	c := &serial.Config{Name: "/dev/ttyUSB0", Baud: 9600}
@@ -27,7 +27,8 @@ func main() {
 			fmt.Print(err)
 			os.Exit(1)
 		}
-		code := string(buf[1 : n-3])
+		code = string(buf[1 : n-3])
+		fmt.Print(code)
 		var request bytes.Buffer
 		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 		request.WriteString(code)
@@ -49,5 +50,6 @@ func main() {
 }
 
 func displayCode(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Yo: "))
 	w.Write([]byte(code))
 }
