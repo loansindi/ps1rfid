@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/tarm/goserial"
+	"io"
 	"net/http"
 	"os"
 )
@@ -21,12 +22,12 @@ func main() {
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
 	for {
-		n, err := u.Read(buf)
+		n, err := io.ReadFull(u, buf)
 		if err != nil {
 			fmt.Print(err)
 			os.Exit(1)
 		}
-		code := string(buf[1 : n-5])
+		code := string(buf[1 : n-3])
 		var request bytes.Buffer
 		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 		request.WriteString(code)
