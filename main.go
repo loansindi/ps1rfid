@@ -28,7 +28,6 @@ func main() {
 			os.Exit(1)
 		}
 		code = string(buf[1 : n-3])
-		fmt.Print(code)
 		var request bytes.Buffer
 		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 		request.WriteString(code)
