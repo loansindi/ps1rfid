@@ -1,4 +1,5 @@
 # Client-side RFID authentication for Pumping Station: One
+<<<<<<< HEAD
 
 This system is built on a BeagleBone Black and Sparkfun's USB board for RFID readers for hardware, and PS1Auth's server-side RFID authentication on the backend.
 
@@ -50,3 +51,5 @@ KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chown -R
 This should allow non-elevated ccess to the GPIO.
 
 
+=======
+>>>>>>> parent of c1e7ed2... Document!
