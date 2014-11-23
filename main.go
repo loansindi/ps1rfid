@@ -45,10 +45,7 @@ func main() {
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
 			code = ""
-			splate.DigitalWrite(1)
-			gobot.After(5*time.Second, func() {
-				splate.DigitalWrite(0)
-			})
+			openDoor(splate)
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
 		} else {
@@ -61,4 +58,12 @@ func main() {
 func displayCode(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Code: "))
 	w.Write([]byte(code))
+}
+
+func openDoor(sp DirectPin) {
+	sp.DigitalWrite(1)
+	gobot.After(5*time.Second, func() {
+		splate.DigitalWrite(0)
+	})
+
 }
