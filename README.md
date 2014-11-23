@@ -22,7 +22,8 @@ Go ahead and also create a group 'gpio'
 
 Here's the service file I'm using to launch the application:
 
-```[Unit]
+```
+[Unit]
 Description=Rfid entry service
 After=udev.service
 
@@ -41,7 +42,8 @@ Drop this in `/etc/systemd/system/rfid.service`
 
 The udev rules go in `/etc/udev/rules.d/90-gpio.rules` :
 
-```KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chown -R rfid:gpio /sys/class/gpio'"
+```
+KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chown -R rfid:gpio /sys/class/gpio'"
 KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chown -R rfid:gpio /sys/devices/virtual/gpio/'"
 ```
 
