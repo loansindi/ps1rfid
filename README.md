@@ -33,6 +33,7 @@ User=rfid
 group=rfid
 ExecStart=/home/derek/go/src/github.com/loansindi/ps1rfid/ps1rfid
 WorkingDirectory=/srv/rfid
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

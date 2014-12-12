@@ -8,3 +8,6 @@ https://www.sparkfun.com/products/9963
 http://www.adafruit.com/products/1876
 
 Strikeplate switching can be accomplished with a variety of transistors, be aware that the BBB can source relatively small amounts of current.
+
+#Exaxmple of suitable transistor
+https://www.sparkfun.com/products/10213
