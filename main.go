@@ -20,6 +20,13 @@ func displayCode(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(code))
 }
 
+func webOpenDoor(w http.ResponseWriter, r *http.Request) {
+	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
+	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
+	w.Write([]byte("Okay"))
+	openDoor(*splate)
+}
+
 func openDoor(sp gpio.DirectPinDriver) {
 	sp.DigitalWrite(1)
 	gobot.After(5*time.Second, func() {
@@ -38,6 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 	go http.HandleFunc("/", displayCode)
+	go http.HandleFunc("/open", webOpenDoor)
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
 	for {
