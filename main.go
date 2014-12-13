@@ -48,7 +48,7 @@ func main() {
 	}
 	go http.HandleFunc("/", displayCode)
 	go http.HandleFunc("/open", webOpenDoor)
-	go http.ListenAndServe(":80", nil)
+	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
 	for {
 		n, err := io.ReadFull(u, buf)
