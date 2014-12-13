@@ -68,6 +68,11 @@ func main() {
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
+			var cacheFile bytes.Buffer
+			cacheFile.WriteString("/srv/rfid")
+			request.WriteString(code)
+			cf := cacheFile.String()
+			os.Create(cf)
 			code = ""
 			openDoor(*splate)
 		} else if resp.StatusCode == 403 {
