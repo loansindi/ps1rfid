@@ -15,6 +15,7 @@ import (
 
 var code string
 
+//displayCode() is so folks who have a new tag can get the tag value to enter it into the backend
 func displayCode(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Code: "))
 	w.Write([]byte(code))
@@ -37,6 +38,7 @@ func openDoor(sp gpio.DirectPinDriver) {
 
 func main() {
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
+	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
 	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
 	c := &serial.Config{Name: "/dev/ttyUSB0", Baud: 9600}
 	u, err := serial.OpenPort(c)
@@ -46,7 +48,7 @@ func main() {
 	}
 	go http.HandleFunc("/", displayCode)
 	go http.HandleFunc("/open", webOpenDoor)
-	go http.ListenAndServe(":8080", nil)
+	go http.ListenAndServe(":80", nil)
 	buf := make([]byte, 16)
 	for {
 		n, err := io.ReadFull(u, buf)
@@ -54,6 +56,7 @@ func main() {
 			fmt.Print(err)
 			os.Exit(1)
 		}
+		// We need to strip the stop and start bytes from the tag, so we only assign a certain range of the slice
 		code = string(buf[1 : n-3])
 		var request bytes.Buffer
 		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
