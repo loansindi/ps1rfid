@@ -15,6 +15,19 @@ import (
 
 var code string
 
+func displayCode(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Code: "))
+	w.Write([]byte(code))
+}
+
+func openDoor(sp gpio.DirectPinDriver) {
+	sp.DigitalWrite(1)
+	gobot.After(5*time.Second, func() {
+		sp.DigitalWrite(0)
+	})
+
+}
+
 func main() {
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
@@ -45,25 +58,12 @@ func main() {
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
 			code = ""
-			openDoor(splate)
+			openDoor(*splate)
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
 		} else {
 			fmt.Println("Code not found")
 		}
 	}
-
-}
-
-func displayCode(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Code: "))
-	w.Write([]byte(code))
-}
-
-func openDoor(sp DirectPin) {
-	sp.DigitalWrite(1)
-	gobot.After(5*time.Second, func() {
-		splate.DigitalWrite(0)
-	})
 
 }
