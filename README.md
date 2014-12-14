@@ -1,4 +1,4 @@
-# Client-side RFID authentication for Pumping Station: One
+# Client-side RFID authentication (and general access control) for Pumping Station: One
 
 This system is built on a BeagleBone Black and Sparkfun's USB board for RFID readers for hardware, and PS1Auth's server-side RFID authentication on the backend.
 
