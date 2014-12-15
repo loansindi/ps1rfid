@@ -41,8 +41,8 @@ func main() {
 	}
 	go http.HandleFunc("/", displayCode)
 	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
-		openDoor(*splate)
 		w.Write([]byte("Okay"))
+		openDoor(*splate)
 	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
