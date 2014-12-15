@@ -13,14 +13,6 @@ import (
 	"time"
 )
 
-var code string
-
-//displayCode() is so folks who have a new tag can get the tag value to enter it into the backend
-func displayCode(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Code: "))
-	w.Write([]byte(code))
-}
-
 func openDoor(sp gpio.DirectPinDriver) {
 	sp.DigitalWrite(1)
 	gobot.After(5*time.Second, func() {
@@ -30,6 +22,7 @@ func openDoor(sp gpio.DirectPinDriver) {
 }
 
 func main() {
+	var code string
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
 	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
@@ -39,7 +32,11 @@ func main() {
 		fmt.Print(err)
 		os.Exit(1)
 	}
-	go http.HandleFunc("/", displayCode)
+	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Code: "))
+		w.Write([]byte(code))
+	})
+	// the anonymous function here allows us to call openDoor with splate remaining in scope
 	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Okay"))
 		openDoor(*splate)
