@@ -11,32 +11,20 @@ import (
 	"net/http"
 	"os"
 	"time"
+	zmq "github.com/pebbe/zmq4"
 )
 
-var code string
-
-//displayCode() is so folks who have a new tag can get the tag value to enter it into the backend
-func displayCode(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Code: "))
-	w.Write([]byte(code))
-}
-
-func webOpenDoor(w http.ResponseWriter, r *http.Request) {
-	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
-	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
-	w.Write([]byte("Okay"))
-	openDoor(*splate)
-}
-
-func openDoor(sp gpio.DirectPinDriver) {
+func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
+	publisher.SendMessage("Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
+		publisher.SendMessage("Door Locked")
 	})
-
 }
 
 func main() {
+	var code string
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
 	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
@@ -46,8 +34,18 @@ func main() {
 		fmt.Print(err)
 		os.Exit(1)
 	}
-	go http.HandleFunc("/", displayCode)
-	go http.HandleFunc("/open", webOpenDoor)
+	//Configure ZMQ publisher
+	publisher, _ := zmq.NewSocket(zmq.PUB)
+	publisher.Bind("tcp://*:5556")
+	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Code: "))
+		w.Write([]byte(code))
+	})
+	// the anonymous function here allows us to call openDoor with splate remaining in scope
+	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Okay"))
+		openDoor(*splate, publisher)
+	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
 	for {
@@ -64,16 +62,20 @@ func main() {
 		resp, err := http.Get(request.String())
 		if err != nil {
 			fmt.Printf("Whoops!")
+			publisher.SendMessage(fmt.Sprintf("Auth Server Error: %s", err))
 			os.Exit(1)
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
+			publisher.SendMessage("RFID Accepted")
 			code = ""
-			openDoor(*splate)
+			openDoor(*splate, publisher)
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
+			publisher.SendMessage("RFID Denied")
 		} else {
 			fmt.Println("Code not found")
+			publisher.SendMessage("RFID not found")
 		}
 	}
 
