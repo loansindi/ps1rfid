@@ -35,8 +35,13 @@ func main() {
 		os.Exit(1)
 	}
 	//Configure ZMQ publisher
-	publisher, _ := zmq.NewSocket(zmq.PUB)
+	publisher, err := zmq.NewSocket(zmq.PUB)
+	if err != nil {
+		fmt.Print(err)
+		os.Exit(1)
+	}
 	publisher.Bind("tcp://*:5556")
+	//Configure ZMQ publisher
 	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Code: "))
 		w.Write([]byte(code))
