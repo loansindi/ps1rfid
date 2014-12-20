@@ -16,10 +16,10 @@ import (
 
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
-	publisher.SendMessage("Door Unlocked")
+	publisher.SendMessage("door.state.unlock", "Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
-		publisher.SendMessage("Door Locked")
+		publisher.SendMessage("door.state.lock", "Door Locked")
 	})
 }
 
@@ -67,20 +67,20 @@ func main() {
 		resp, err := http.Get(request.String())
 		if err != nil {
 			fmt.Printf("Whoops!")
-			publisher.SendMessage(fmt.Sprintf("Auth Server Error: %s", err))
+			publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
 			os.Exit(1)
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
-			publisher.SendMessage("RFID Accepted")
+			publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 			code = ""
 			openDoor(*splate, publisher)
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
-			publisher.SendMessage("RFID Denied")
+			publisher.SendMessage("door.rfid.deny", "RFID Denied")
 		} else {
 			fmt.Println("Code not found")
-			publisher.SendMessage("RFID not found")
+			publisher.SendMessage("door.rfid.deny", "RFID not found")
 		}
 	}
 
