@@ -11,14 +11,16 @@ import (
 	"net/http"
 	"os"
 	"time"
+	zmq "github.com/pebbe/zmq4"
 )
 
-func openDoor(sp gpio.DirectPinDriver) {
+func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
+	publisher.SendMessage("door.state.unlock", "Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
+		publisher.SendMessage("door.state.lock", "Door Locked")
 	})
-
 }
 
 func main() {
@@ -32,6 +34,14 @@ func main() {
 		fmt.Print(err)
 		os.Exit(1)
 	}
+	//Configure ZMQ publisher
+	publisher, err := zmq.NewSocket(zmq.PUB)
+	if err != nil {
+		fmt.Print(err)
+		os.Exit(1)
+	}
+	publisher.Bind("tcp://*:5556")
+	//Configure ZMQ publisher
 	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Code: "))
 		w.Write([]byte(code))
@@ -39,7 +49,7 @@ func main() {
 	// the anonymous function here allows us to call openDoor with splate remaining in scope
 	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Okay"))
-		openDoor(*splate)
+		openDoor(*splate, publisher)
 	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
@@ -57,16 +67,20 @@ func main() {
 		resp, err := http.Get(request.String())
 		if err != nil {
 			fmt.Printf("Whoops!")
+			publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
 			os.Exit(1)
 		}
 		if resp.StatusCode == 200 {
 			fmt.Println("Success!")
+			publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 			code = ""
-			openDoor(*splate)
+			openDoor(*splate, publisher)
 		} else if resp.StatusCode == 403 {
 			fmt.Println("Membership status: Expired")
+			publisher.SendMessage("door.rfid.deny", "RFID Denied")
 		} else {
 			fmt.Println("Code not found")
+			publisher.SendMessage("door.rfid.deny", "RFID not found")
 		}
 	}
 
