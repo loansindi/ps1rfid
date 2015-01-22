@@ -19,8 +19,8 @@ This while take a while.
 **Required Packages**
 
 *Debian*
-* libzmq3 (libzmq3-dev ?)
-* golang (at the time of writing this is Go v1.3.2-1)
+`sudo apt-get install libzmq3`  
+`sudo apt-get install golang`  
 
 *Golang*
 * github.com/pebbe/zmq4
