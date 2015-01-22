@@ -11,6 +11,11 @@ Making things work
 
 This software is targeted at Debian Jessie. From the default image, update `/etc/apt/sources.list` to point at 'jessie' instead of 'wheezy'
 
+`sudo apt-get update`
+`sudo apt-get dist-upgrade`
+
+This while take a while.
+
 **Required Packages**
 
 *Debian*
