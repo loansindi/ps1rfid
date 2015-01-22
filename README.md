@@ -22,7 +22,7 @@ This while take a while.
 `sudo apt-get install libzmq3`  
 `sudo apt-get install golang`  
 
-*Golang*
+*Golang*  
 `go get github.com/pebbe/zmq4`  
 `go get github.com/hybridgroup/gobot`  
 `go get github.com/hybridgroup/gobot/platforms/beaglebone`  
