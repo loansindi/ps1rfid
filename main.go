@@ -6,12 +6,12 @@ import (
 	"github.com/hybridgroup/gobot"
 	"github.com/hybridgroup/gobot/platforms/beaglebone"
 	"github.com/hybridgroup/gobot/platforms/gpio"
+	zmq "github.com/pebbe/zmq4"
 	"github.com/tarm/goserial"
 	"io"
 	"net/http"
 	"os"
 	"time"
-	zmq "github.com/pebbe/zmq4"
 )
 
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
@@ -51,7 +51,7 @@ func main() {
 	}
 	publisher.Bind("tcp://*:5556")
 	//Configure ZMQ publisher
-	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Code: "))
 		w.Write([]byte(code))
 	})
@@ -73,7 +73,7 @@ func main() {
 		work,
 	)
 	gbot.AddRobot(robot)
-	gbot.Start()	
+	gbot.Start()
 	for {
 		n, err := io.ReadFull(u, buf)
 		if err != nil {
