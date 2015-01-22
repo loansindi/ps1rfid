@@ -23,11 +23,11 @@ This while take a while.
 `sudo apt-get install golang`  
 
 *Golang*
-`go get github.com/pebbe/zmq4`
-`go get github.com/hybridgroup/gobot`
-`go get github.com/hybridgroup/gobot/platforms/beaglebone`
-`go get github.com/hybridgroup/gobot/platforms/gpio`
-`go get github.com/tarm/goserial`
+`go get github.com/pebbe/zmq4`  
+`go get github.com/hybridgroup/gobot`  
+`go get github.com/hybridgroup/gobot/platforms/beaglebone`  
+`go get github.com/hybridgroup/gobot/platforms/gpio`  
+`go get github.com/tarm/goserial`  
 
 Cloning this repo to your BBB (and building an executable) is the next step. The primary challenges:
 
