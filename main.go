@@ -17,7 +17,7 @@ import (
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
 	publisher.SendMessage("door.state.unlock", "Door Unlocked")
-	fmt.Print("Door Unlocked")
+	fmt.Print("Front Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
 		publisher.SendMessage("door.state.lock", "Door Locked")
