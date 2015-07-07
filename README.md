@@ -52,7 +52,7 @@ After=udev.service
 [Service]
 Type=simple
 User=rfid
-Group=rfid
+Group=gpio
 ExecStart=$GOPATH/src/github.com/loansindi/ps1rfid/ps1frid
 WorkingDirectory=/srv/rfid
 Restart=always
