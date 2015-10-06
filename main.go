@@ -6,53 +6,74 @@ import (
 	"github.com/hybridgroup/gobot"
 	"github.com/hybridgroup/gobot/platforms/beaglebone"
 	"github.com/hybridgroup/gobot/platforms/gpio"
+	zmq "github.com/pebbe/zmq4"
 	"github.com/tarm/goserial"
 	"io"
 	"net/http"
 	"os"
 	"time"
-	zmq "github.com/pebbe/zmq4"
 )
 
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
 	publisher.SendMessage("door.state.unlock", "Door Unlocked")
+	fmt.Print("Front Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
 		publisher.SendMessage("door.state.lock", "Door Locked")
 	})
 }
 
+func doorBell(publisher *zmq.Socket) {
+	publisher.SendMessage("door.bell", "Ding Dong!")
+	fmt.Println("Ding Dong")
+	time.Sleep(1 * time.Second)
+}
+
 func main() {
 	var code string
+	gbot := gobot.NewGobot()
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
 	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
+	bell := gpio.NewButtonDriver(beagleboneAdaptor, "bell", "P9_14")
 	c := &serial.Config{Name: "/dev/ttyUSB0", Baud: 9600}
 	u, err := serial.OpenPort(c)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	//Configure ZMQ publisher
 	publisher, err := zmq.NewSocket(zmq.PUB)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	publisher.Bind("tcp://*:5556")
 	//Configure ZMQ publisher
-	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Code: "))
 		w.Write([]byte(code))
 	})
 	// the anonymous function here allows us to call openDoor with splate remaining in scope
-	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Okay"))
 		openDoor(*splate, publisher)
 	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
+	work := func() {
+		gobot.On(bell.Event("push"), func(data interface{}) {
+			doorBell(publisher)
+		})
+	}
+	robot := gobot.NewRobot("doorbell",
+		[]gobot.Connection{beagleboneAdaptor},
+		[]gobot.Device{bell},
+		work,
+	)
+	gbot.AddRobot(robot)
+	gbot.Start()
 	for {
 		n, err := io.ReadFull(u, buf)
 		if err != nil {
