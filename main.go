@@ -12,7 +12,33 @@ import (
 	"net/http"
 	"os"
 	"time"
+    "github.com/boltdb/bolt"
 )
+
+var cacheDB *bolt.DB
+
+func checkCacheDBForTag(tag string) bool {
+    val := ""
+    cacheDB.View(func(tx *bolt.Tx) error {
+        b := tx.Bucket([]byte("RFIDBucket"))
+        val = string(b.Get([]byte(tag)))
+            return nil
+    })
+
+    if val != "" {
+        return true
+    }
+
+    return false
+}
+
+func addTagToCacheDB(tag string) {
+    cacheDB.Update(func(tx *bolt.Tx) error {
+        b := tx.Bucket([]byte("RFIDBucket"))
+        err := b.Put([]byte(tag), []byte(tag))
+            return err
+    })
+}
 
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
 	sp.DigitalWrite(1)
@@ -32,6 +58,23 @@ func doorBell(publisher *zmq.Socket) {
 
 func main() {
 	var code string
+
+    var err error
+
+    cacheDB, err = bolt.Open("rfid-tags.db", 0600, nil)
+    if err != nil {
+        fmt.Println(err)
+    }
+    defer cacheDB.Close()
+
+    cacheDB.Update(func(tx *bolt.Tx) error {
+        _, err := tx.CreateBucketIfNotExists([]byte("RFIDBucket"))
+        if err != nil {
+           return fmt.Errorf("create bucket: %s", err)
+        }
+        return nil
+    })
+
 	gbot := gobot.NewGobot()
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
@@ -82,27 +125,42 @@ func main() {
 		}
 		// We need to strip the stop and start bytes from the tag, so we only assign a certain range of the slice
 		code = string(buf[1 : n-3])
-		var request bytes.Buffer
-		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
-		request.WriteString(code)
-		resp, err := http.Get(request.String())
-		if err != nil {
-			fmt.Printf("Whoops!")
-			publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
-			os.Exit(1)
-		}
-		if resp.StatusCode == 200 {
+
+        // Before checking the site for the code, let's check our cache
+        if checkCacheDBForTag(code) == false {
+            // Didn't find it in the cache, so let's go ask the server
+		    var request bytes.Buffer
+		    request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
+		    request.WriteString(code)
+		    resp, err := http.Get(request.String())
+		    if err != nil {
+			    fmt.Printf("Whoops!")
+			    publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
+			    os.Exit(1)
+		    }
+		    if resp.StatusCode == 200 {
+                // We got 200 back, so we're good to add this
+                // tag to the cache
+                addTagToCacheDB(code)
+
+			    fmt.Println("Success!")
+			    publisher.SendMessage("door.rfid.accept", "RFID Accepted")
+			    code = ""
+			    openDoor(*splate, publisher)
+		    } else if resp.StatusCode == 403 {
+			    fmt.Println("Membership status: Expired")
+			    publisher.SendMessage("door.rfid.deny", "RFID Denied")
+		    } else {
+			    fmt.Println("Code not found")
+			    publisher.SendMessage("door.rfid.deny", "RFID not found")
+		    }
+        } else {
+            // If we're here, we found the tag in the cache, so
+            // let's just go and open the door for 'em
 			fmt.Println("Success!")
 			publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 			code = ""
 			openDoor(*splate, publisher)
-		} else if resp.StatusCode == 403 {
-			fmt.Println("Membership status: Expired")
-			publisher.SendMessage("door.rfid.deny", "RFID Denied")
-		} else {
-			fmt.Println("Code not found")
-			publisher.SendMessage("door.rfid.deny", "RFID not found")
-		}
+        }
 	}
-
 }
