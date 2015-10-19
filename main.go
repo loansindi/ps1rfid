@@ -18,26 +18,26 @@ import (
 var cacheDB *bolt.DB
 
 func checkCacheDBForTag(tag string) bool {
-        val := ""
-        cacheDB.View(func(tx *bolt.Tx) error {
-                b := tx.Bucket([]byte("RFIDBucket"))
-                val = string(b.Get([]byte(tag)))
-                return nil
-        })
+	val := ""
+	cacheDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("RFIDBucket"))
+		val = string(b.Get([]byte(tag)))
+		return nil
+	})
 
-        if val != "" {
-                return true
-        }
+	if val != "" {
+		return true
+	}
 
-        return false
+	return false
 }
 
 func addTagToCacheDB(tag string) {
-        cacheDB.Update(func(tx *bolt.Tx) error {
-                b := tx.Bucket([]byte("RFIDBucket"))
-                err := b.Put([]byte(tag), []byte(tag))
-                return err
-        })
+	cacheDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("RFIDBucket"))
+		err := b.Put([]byte(tag), []byte(tag))
+		return err
+	})
 }
 
 func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
@@ -89,57 +89,56 @@ func main() {
 		code = string(buf[1 : n-3])
 
   		// Now open the cache db to check if it's already here
-                cacheDB, err = bolt.Open("/home/derek/go/src/github.com/loansindi/ps1rfid/rfid-tags.db", 0600, nil)
-                if err != nil {
-                        fmt.Println(err)
-                }
+        cacheDB, err = bolt.Open("rfid-tags.db", 0600, nil)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-                cacheDB.Update(func(tx *bolt.Tx) error {
-                        _, err := tx.CreateBucketIfNotExists([]byte("RFIDBucket"))
-                        if err != nil {
-                                return fmt.Errorf("create bucket: %s", err)
-                        }
-                        return nil
-                })
+		cacheDB.Update(func(tx *bolt.Tx) error {
+			_, err := tx.CreateBucketIfNotExists([]byte("RFIDBucket"))
+			if err != nil {
+				return fmt.Errorf("create bucket: %s", err)
+			}
+			return nil
+		})
 
 		// Before checking the site for the code, let's check our cache
-                if checkCacheDBForTag(code) == false {
-		var request bytes.Buffer
-		request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
-		request.WriteString(code)
-		resp, err := http.Get(request.String())
-		if err != nil {
-			fmt.Printf("Whoops!")
-			publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
-			os.Exit(1)
-		}
-		if resp.StatusCode == 200 {
+        if checkCacheDBForTag(code) == false {
+			var request bytes.Buffer
+			request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
+			request.WriteString(code)
+			resp, err := http.Get(request.String())
+			if err != nil {
+				fmt.Printf("Whoops!")
+				publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
+				os.Exit(1)
+			}
+			if resp.StatusCode == 200 {
 
-			 // We got 200 back, so we're good to add this
-                                // tag to the cache
-                                addTagToCacheDB(code)
+				// We got 200 back, so we're good to add this
+				// tag to the cache
+				addTagToCacheDB(code)
 
+				fmt.Println("Success!")
+				publisher.SendMessage("door.rfid.accept", "RFID Accepted")
+				code = ""
+				openDoor(*splate, publisher)
+			} else if resp.StatusCode == 403 {
+				fmt.Println("Membership status: Expired")
+				publisher.SendMessage("door.rfid.deny", "RFID Denied")
+			} else {
+				fmt.Println("Code not found")
+				publisher.SendMessage("door.rfid.deny", "RFID not found")
+			}
+  		} else {
+			// If we're here, we found the tag in the cache, so
+			// let's just go and open the door for 'em
 			fmt.Println("Success!")
 			publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 			code = ""
 			openDoor(*splate, publisher)
-		} else if resp.StatusCode == 403 {
-			fmt.Println("Membership status: Expired")
-			publisher.SendMessage("door.rfid.deny", "RFID Denied")
-		} else {
-			fmt.Println("Code not found")
-			publisher.SendMessage("door.rfid.deny", "RFID not found")
 		}
-  		} else {
-                        // If we're here, we found the tag in the cache, so
-                        // let's just go and open the door for 'em
-                        fmt.Println("Success!")
-                        publisher.SendMessage("door.rfid.accept", "RFID Accepted")
-                        code = ""
-                        openDoor(*splate, publisher)
-                }
 
-                cacheDB.Close()
+    	cacheDB.Close()
 	}
-
 }
