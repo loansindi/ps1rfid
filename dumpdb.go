@@ -1,12 +1,12 @@
 package main
 
-import(
-	"log"
+import (
 	"fmt"
 	"github.com/boltdb/bolt"
+	"log"
 )
 
-func main() {
+func dumpdb() {
 	var err error
 
 	fmt.Println("Opening database...")
@@ -23,6 +23,6 @@ func main() {
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 		fmt.Printf("tag = %s, value = %s\n", k, v)
 	}
-	
+
 	fmt.Println("Done!")
 }

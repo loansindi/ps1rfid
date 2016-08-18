@@ -3,16 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/boltdb/bolt"
 	"github.com/hybridgroup/gobot"
 	"github.com/hybridgroup/gobot/platforms/beaglebone"
 	"github.com/hybridgroup/gobot/platforms/gpio"
+	//"github.com/pebbe/zmq4"
 	"github.com/tarm/goserial"
 	"io"
 	"net/http"
 	"os"
 	"time"
-	zmq "github.com/pebbe/zmq4"
-	"github.com/boltdb/bolt"
 )
 
 var cacheDB *bolt.DB
@@ -40,12 +40,10 @@ func addTagToCacheDB(tag string) {
 	})
 }
 
-func openDoor(sp gpio.DirectPinDriver, publisher *zmq.Socket) {
+func openDoor(sp gpio.DirectPinDriver) {
 	sp.DigitalWrite(1)
-	publisher.SendMessage("door.state.unlock", "Door Unlocked")
 	gobot.After(5*time.Second, func() {
 		sp.DigitalWrite(0)
-		publisher.SendMessage("door.state.lock", "Door Locked")
 	})
 }
 
@@ -60,22 +58,11 @@ func main() {
 		fmt.Print(err)
 		os.Exit(1)
 	}
-	//Configure ZMQ publisher
-	publisher, err := zmq.NewSocket(zmq.PUB)
-	if err != nil {
-		fmt.Print(err)
-		os.Exit(1)
-	}
-	publisher.Bind("tcp://*:5556")
-	//Configure ZMQ publisher
-	go http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Code: "))
-		w.Write([]byte(code))
-	})
+
 	// the anonymous function here allows us to call openDoor with splate remaining in scope
 	go http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Okay"))
-		openDoor(*splate, publisher)
+		openDoor(*splate)
 	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
@@ -88,8 +75,8 @@ func main() {
 		// We need to strip the stop and start bytes from the tag, so we only assign a certain range of the slice
 		code = string(buf[1 : n-3])
 
-  		// Now open the cache db to check if it's already here
-        cacheDB, err = bolt.Open("rfid-tags.db", 0600, nil)
+		// Now open the cache db to check if it's already here
+		cacheDB, err = bolt.Open("rfid-tags.db", 0600, nil)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -103,14 +90,13 @@ func main() {
 		})
 
 		// Before checking the site for the code, let's check our cache
-        if checkCacheDBForTag(code) == false {
+		if checkCacheDBForTag(code) == false {
 			var request bytes.Buffer
 			request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 			request.WriteString(code)
 			resp, err := http.Get(request.String())
 			if err != nil {
 				fmt.Printf("Whoops!")
-				publisher.SendMessage("door.rfid.error", fmt.Sprintf("Auth Server Error: %s", err))
 				os.Exit(1)
 			}
 			if resp.StatusCode == 200 {
@@ -120,25 +106,21 @@ func main() {
 				addTagToCacheDB(code)
 
 				fmt.Println("Success!")
-				publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 				code = ""
-				openDoor(*splate, publisher)
+				openDoor(*splate)
 			} else if resp.StatusCode == 403 {
 				fmt.Println("Membership status: Expired")
-				publisher.SendMessage("door.rfid.deny", "RFID Denied")
 			} else {
 				fmt.Println("Code not found")
-				publisher.SendMessage("door.rfid.deny", "RFID not found")
 			}
-  		} else {
+		} else {
 			// If we're here, we found the tag in the cache, so
 			// let's just go and open the door for 'em
 			fmt.Println("Success!")
-			publisher.SendMessage("door.rfid.accept", "RFID Accepted")
 			code = ""
-			openDoor(*splate, publisher)
+			openDoor(*splate)
 		}
 
-    	cacheDB.Close()
+		cacheDB.Close()
 	}
 }
