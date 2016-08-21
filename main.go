@@ -2,17 +2,19 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
-	"github.com/boltdb/bolt"
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/beaglebone"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	//"github.com/pebbe/zmq4"
-	"github.com/tarm/goserial"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/boltdb/bolt"
+	"github.com/hybridgroup/gobot"
+	"github.com/hybridgroup/gobot/platforms/beaglebone"
+	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/loansindi/ps1rfid/cfg"
+	"github.com/tarm/goserial"
 )
 
 var cacheDB *bolt.DB
@@ -48,6 +50,13 @@ func openDoor(sp gpio.DirectPinDriver) {
 }
 
 func main() {
+
+	var settingsFile string
+	flag.StringVar(&settingsFile, "config", "./config.toml", "Path to the config file")
+	flag.Parse()
+	config, err := cfg.ReadConfig(settingsFile)
+	fmt.Printf("Config: %v", config)
+
 	var code string
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me

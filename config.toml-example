@@ -1,0 +1,8 @@
+version = "1.0"
+service_port = 8080
+rfid_url = "https://members.pumpingstationone.org/rfid/check/"
+rfid_resource = "FrontDoor"
+toggle_duration = 5
+toggle_pin = "P9_11"
+serial_name = "/dev/ttyUSB0"
+serial_baud = 9600
