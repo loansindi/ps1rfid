@@ -1,6 +1,8 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
+ * Copyright 2015 Derek Bever
+ *
  * This file is part of ps1rfid.
  *
  * ps1rfid is free software: you can redistribute it and/or modify it under
