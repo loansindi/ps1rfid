@@ -74,7 +74,7 @@ func main() {
 	var settingsFile string
 	flag.StringVar(&settingsFile, "config", "./config.toml", "Path to the config file")
 	flag.Parse()
-	config, err := cfg.ReadConfig(settingsFile)
+	config, err := ps1rfid.ReadConfig(settingsFile)
 	fmt.Printf("Config: %v\n", config)
 
 	var code string
