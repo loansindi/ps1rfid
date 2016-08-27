@@ -25,7 +25,8 @@ This while take a while.
 `go get github.com/hybridgroup/gobot`  
 `go get github.com/hybridgroup/gobot/platforms/beaglebone`  
 `go get github.com/hybridgroup/gobot/platforms/gpio`  
-`go get github.com/tarm/goserial`  
+`go get github.com/tarm/goserial` 
+`go get github.com/BurntSushi/toml`
 
 Cloning this repo to your BBB (and building an executable) is the next step. The primary challenges:
 
