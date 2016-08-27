@@ -1,4 +1,4 @@
-package cfg
+package ps1rfid
 
 import (
 	"fmt"
