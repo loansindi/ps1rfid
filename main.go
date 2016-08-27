@@ -33,7 +33,7 @@ import (
 	"github.com/hybridgroup/gobot"
 	"github.com/hybridgroup/gobot/platforms/beaglebone"
 	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/loansindi/ps1rfid/cfg"
+	"github.com/loansindi/ps1rfid/ps1rfid"
 	"github.com/tarm/goserial"
 )
 
@@ -75,7 +75,7 @@ func main() {
 	flag.StringVar(&settingsFile, "config", "./config.toml", "Path to the config file")
 	flag.Parse()
 	config, err := cfg.ReadConfig(settingsFile)
-	fmt.Printf("Config: %v", config)
+	fmt.Printf("Config: %v\n", config)
 
 	var code string
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
