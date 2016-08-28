@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -28,6 +27,15 @@ func (r *Robot) configure() {
 	if boltErr != nil {
 		log.Fatalf("Unable to open the cacheDB: %+v", boltErr)
 	}
+
+	//Now we initialize the RFIDBucket bucket if it doesn't already exist
+	r.cacheDB.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("RFIDBucket"))
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		return nil
+	})
 
 	//Configure the DirectPinDriver
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
@@ -66,52 +74,47 @@ func (r Robot) runRobot() {
 
 		code := r.serialRead()
 
-		// I'm not 100% sure what this code is doing. Is it initalizing `RFIDBucket` if it doesn't exist?
-		r.cacheDB.Update(func(tx *bolt.Tx) error {
-			_, err := tx.CreateBucketIfNotExists([]byte("RFIDBucket"))
-			if err != nil {
-				return fmt.Errorf("create bucket: %s", err)
-			}
-			return nil
-		})
-
 		// Before checking the site for the code, let's check our cache
-		if checkCacheDBForTag(code, r.cacheDB) == false {
-			var request bytes.Buffer
-			request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
-			request.WriteString(code)
-			resp, err := http.Get(request.String())
-			if err != nil {
-				log.Fatalf("Unable to reach https://members.pumpingstationone.org/rfid/check/FrontDoor/ : %+v", err)
-			}
-			if resp.StatusCode == 200 {
-
-				// We got 200 back, so we're good to add this
-				// tag to the cache
-				addTagToCacheDB(code, r.cacheDB)
-
-				fmt.Println("Success!")
-				code = ""
-				r.openDoor()
-			} else if resp.StatusCode == 403 {
-				fmt.Println("Membership status: Expired")
-			} else {
-				fmt.Println("Code not found")
-			}
-		} else {
-			// If we're here, we found the tag in the cache, so
-			// let's just go and open the door for 'em
-			fmt.Println("Success!")
-			code = ""
+		if r.checkCacheDBForTag(code) {
+			log.Printf("%s scanned in via the cache successfully.", code)
 			r.openDoor()
+		} else if r.checkPS1ForTag(code) {
+			log.Printf("%s scanned in via members.ps1.org successfully", code)
+			r.openDoor()
+		} else {
+			log.Println("%s was found in neither the cache not the ps1 member site.")
 		}
 
 	}
 }
 
-func checkCacheDBForTag(tag string, cacheDB *bolt.DB) bool {
+func (r Robot) checkPS1ForTag(code string) bool {
+	rfidCheckUrl := fmt.Sprintf("https://members.pumpingstationone.org/rfid/check/FrontDoor/%s", code)
+	resp, err := http.Get(rfidCheckUrl)
+	if err != nil {
+		log.Printf("Unable to access %s for this reason: %+v", rfidCheckUrl, err)
+		return false
+	}
+	if resp.StatusCode == 200 {
+		// We got 200 back, so we're good to add this
+		// tag to the cache
+		r.addTagToCacheDB(code)
+
+		log.Printf("%s found in the database and added to cache.", code)
+		return true
+	}
+	if resp.StatusCode == 403 {
+		log.Printf("%s tried to scan in, but mebership was expired.", code)
+		return false
+	} else {
+		log.Printf("%s tried to scan in, but code was not found.", code)
+		return false
+	}
+}
+
+func (r Robot) checkCacheDBForTag(tag string) bool {
 	val := ""
-	cacheDB.View(func(tx *bolt.Tx) error {
+	r.cacheDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("RFIDBucket"))
 		val = string(b.Get([]byte(tag)))
 		return nil
@@ -124,8 +127,8 @@ func checkCacheDBForTag(tag string, cacheDB *bolt.DB) bool {
 	return false
 }
 
-func addTagToCacheDB(tag string, cacheDB *bolt.DB) {
-	cacheDB.Update(func(tx *bolt.Tx) error {
+func (r Robot) addTagToCacheDB(tag string) {
+	r.cacheDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("RFIDBucket"))
 		err := b.Put([]byte(tag), []byte(tag))
 		return err
