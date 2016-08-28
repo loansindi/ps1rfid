@@ -4,6 +4,10 @@ This system is built on a BeagleBone Black and Sparkfun's USB board for RFID rea
 
 Client-side software is written in Go. 
 
+Build using `go build main.go beagleboneRobot.go dummyRobot.go server.go`
+
+Run using `./main -testMode=true`
+
 
 Making things work
 -----
