@@ -68,24 +68,31 @@ func (r Robot) serialRead() string {
 	return string(buf[1 : n-3])
 }
 
-func (r Robot) runRobot() {
+func (r Robot) runRobot(shutdown chan bool) {
 	defer r.cacheDB.Close()
 	for {
-
-		code := r.serialRead()
-
-		// Before checking the site for the code, let's check our cache
-		if r.checkCacheDBForTag(code) {
-			log.Printf("%s scanned in via the cache successfully.", code)
-			r.openDoor()
-		} else if r.checkPS1ForTag(code) {
-			log.Printf("%s scanned in via members.ps1.org successfully", code)
-			r.openDoor()
-		} else {
-			log.Println("%s was found in neither the cache not the ps1 member site.")
+		// Check to see if we need to exit this loop
+		select {
+		case <-shutdown:
+			// break out of the for loop, which will trigger the r.cacheDB.Close()
+			log.Println("Caught the shutdown signal. Bailing out.")
+			goto quit
+		default: // if we don't have anything on shutdown, keep on keepin' on.
+			code := r.serialRead()
+			// Before checking the site for the code, let's check our cache
+			if r.checkCacheDBForTag(code) {
+				log.Printf("%s scanned in via the cache successfully.", code)
+				r.openDoor()
+			} else if r.checkPS1ForTag(code) {
+				log.Printf("%s scanned in via members.ps1.org successfully", code)
+				r.openDoor()
+			} else {
+				log.Println("%s was found in neither the cache not the ps1 member site.")
+			}
 		}
-
 	}
+quit:
+	log.Println("Exited the run loop. Later taters.")
 }
 
 func (r Robot) checkPS1ForTag(code string) bool {

@@ -23,10 +23,14 @@ package main
 import (
 	"flag"
 	"log"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"time"
 )
 
 type Robotter interface {
-	runRobot()
+	runRobot(shutdown chan bool)
 	openDoor()
 }
 
@@ -56,7 +60,24 @@ func main() {
 		log.Println("RealRobot initialized")
 	}
 
-	go thisRobot.runRobot()
+	shutdown := make(chan bool, 1)
+
+	//catch SIGINT, SIGKILL for clean shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			log.Printf("Caught %v. Shutting down the running goroutine.", sig)
+			shutdown <- true
+			goto quit
+		}
+	quit:
+		log.Println("Bailin' out of the signal notification goroutine")
+		time.Sleep(1 * time.Second)
+		os.Exit(1)
+	}()
+
+	go thisRobot.runRobot(shutdown)
 
 	serve(thisRobot)
 }
