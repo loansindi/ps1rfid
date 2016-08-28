@@ -48,10 +48,11 @@ func openDoor(sp gpio.DirectPinDriver) {
 }
 
 func main() {
+
 	var code string
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
-	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
+	splate := gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_13")
 	c := &serial.Config{Name: "/dev/ttyUSB0", Baud: 9600}
 	u, err := serial.OpenPort(c)
 	if err != nil {
