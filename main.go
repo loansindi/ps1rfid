@@ -37,9 +37,7 @@ import (
 	"github.com/tarm/goserial"
 )
 
-var cacheDB *bolt.DB
-
-func checkCacheDBForTag(tag string) bool {
+func checkCacheDBForTag(tag string, cacheDB *bolt.DB) bool {
 	val := ""
 	cacheDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("RFIDBucket"))
@@ -54,7 +52,7 @@ func checkCacheDBForTag(tag string) bool {
 	return false
 }
 
-func addTagToCacheDB(tag string) {
+func addTagToCacheDB(tag string, cacheDB *bolt.DB) {
 	cacheDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("RFIDBucket"))
 		err := b.Put([]byte(tag), []byte(tag))
@@ -95,6 +93,7 @@ func main() {
 	})
 	go http.ListenAndServe(":8080", nil)
 	buf := make([]byte, 16)
+	var cacheDB *bolt.DB
 	for {
 		n, err := io.ReadFull(u, buf)
 		if err != nil {
@@ -119,7 +118,7 @@ func main() {
 		})
 
 		// Before checking the site for the code, let's check our cache
-		if checkCacheDBForTag(code) == false {
+		if checkCacheDBForTag(code, cacheDB) == false {
 			var request bytes.Buffer
 			request.WriteString("https://members.pumpingstationone.org/rfid/check/FrontDoor/")
 			request.WriteString(code)
@@ -132,7 +131,7 @@ func main() {
 
 				// We got 200 back, so we're good to add this
 				// tag to the cache
-				addTagToCacheDB(code)
+				addTagToCacheDB(code, cacheDB)
 
 				fmt.Println("Success!")
 				code = ""
