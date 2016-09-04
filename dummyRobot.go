@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"time"
 )
@@ -20,7 +21,13 @@ func (d DummyRobot) runRobot(shutdown chan bool) {
 			log.Println("Caught the shutdown signal. Bailing out.")
 			goto quit
 		default:
-			time.Sleep(1 * time.Second)
+
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Code: ")
+			text, _ := reader.ReadString('\n')
+			urlString := "https://members.pumpingstationone.org/rfid/check/FrontDoor/" + text //let's remove a dependency on members.ps1.org
+			fmt.Printf("I would send a request to %v but let's assume it just works.\n", urlString)
+			d.openDoor()
 		}
 	}
 quit:
