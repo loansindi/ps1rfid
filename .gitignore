@@ -1,2 +1,6 @@
+# ignore executables
 ps1rfid
+main
+
+# ignore config files
 config.toml

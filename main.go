@@ -22,13 +22,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
+// The Robotter interface specifies what any bot much implement to
+// work with ps1rfid.
 type Robotter interface {
 	runRobot(shutdown chan bool)
 	openDoor()
@@ -36,17 +41,22 @@ type Robotter interface {
 
 func main() {
 
-	// var settingsFile string
-	// flag.StringVar(&settingsFile, "config", "./config.toml", "Path to the config file")
-	// flag.Parse()
-	// config, err := cfg.ReadConfig(settingsFile)
-	// fmt.Printf("Config: %v", config)
-
+	var settingsFile string
+	flag.StringVar(&settingsFile, "config", "", "Path to config file. When this is not set it uses default values")
 	var testMode bool
 	flag.BoolVar(&testMode, "testMode", false, "Use this flag to run this thing in test mode")
 	flag.Parse()
 
+	cfg, err := ReadConfig(settingsFile)
+	if err != nil {
+		fmt.Print(err)
+		// TODO what do you actually want to do here? bail out?
+		cfg = ConfigDefault
+	}
+
 	log.Printf("Test mode flag set to: %v", testMode)
+	log.Printf("Config settings:")
+	spew.Dump(cfg)
 
 	var thisRobot Robotter
 	if testMode {
@@ -55,7 +65,7 @@ func main() {
 		log.Println("DummyRobot intialized")
 	} else {
 		var realRobot Robot
-		realRobot.configure()
+		realRobot.configure(cfg)
 		thisRobot = realRobot
 		log.Println("RealRobot initialized")
 	}

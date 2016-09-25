@@ -1,4 +1,4 @@
-package cfg
+package main
 
 import (
 	"fmt"
@@ -17,14 +17,14 @@ func TestMissingConfig(t *testing.T) {
 }
 
 func TestValidConfig(t *testing.T) {
-	_, err := ReadConfig("../config.toml-example")
+	_, err := ReadConfig("./config.toml-example")
 	if err != nil {
-		t.Error("Unexpected error for valid settings file: %v", err)
+		t.Errorf("Unexpected error for valid settings file: %v", err)
 	}
 }
 
 func TestInValidConfig(t *testing.T) {
-	_, err := ReadConfig("../README.md")
+	_, err := ReadConfig("./README.md")
 	if err == nil {
 		t.Error("Expected error for missing config file")
 	}
