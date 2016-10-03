@@ -14,16 +14,19 @@ import (
 	"github.com/tarm/goserial"
 )
 
+// Robot contains resources used to interact with the BeagleBone and Cache.
 type Robot struct {
 	cacheDB     *bolt.DB
 	strikePlate *gpio.DirectPinDriver
 	serialPort  io.ReadWriter
+	cfg         Config
 }
 
-func (r *Robot) configure() {
+func (r *Robot) configure(cfg Config) {
+	r.cfg = cfg
 	// Now open the cache db to check if it's already here
 	var boltErr error
-	r.cacheDB, boltErr = bolt.Open("rfid-tags.db", 0600, nil)
+	r.cacheDB, boltErr = bolt.Open(cfg.BoltPath, 0600, nil)
 	if boltErr != nil {
 		log.Fatalf("Unable to open the cacheDB: %+v", boltErr)
 	}
@@ -40,10 +43,10 @@ func (r *Robot) configure() {
 	//Configure the DirectPinDriver
 	beagleboneAdaptor := beaglebone.NewBeagleboneAdaptor("beaglebone")
 	//NewDirectPinDriver returns a pointer - this wasn't immediately obvious to me
-	r.strikePlate = gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", "P9_11")
+	r.strikePlate = gpio.NewDirectPinDriver(beagleboneAdaptor, "splate", cfg.TogglePin)
 
 	//Configure the serial port
-	c := &serial.Config{Name: "/dev/ttyUSB0", Baud: 9600}
+	c := &serial.Config{Name: cfg.SerialName, Baud: cfg.SerialBaud}
 	var serialErr error
 	r.serialPort, serialErr = serial.OpenPort(c)
 	if serialErr != nil {
@@ -53,7 +56,8 @@ func (r *Robot) configure() {
 
 func (r Robot) openDoor() {
 	r.strikePlate.DigitalWrite(1)
-	gobot.After(5*time.Second, func() {
+	duration := time.Duration(r.cfg.ToggleDuration) * time.Second
+	gobot.After(duration, func() {
 		r.strikePlate.DigitalWrite(0)
 	})
 }
@@ -87,7 +91,7 @@ func (r Robot) runRobot(shutdown chan bool) {
 				log.Printf("%s scanned in via members.ps1.org successfully", code)
 				r.openDoor()
 			} else {
-				log.Println("%s was found in neither the cache not the ps1 member site.")
+				log.Printf("%s was found in neither the cache not the ps1 member site.", code)
 			}
 		}
 	}
@@ -96,13 +100,13 @@ quit:
 }
 
 func (r Robot) checkPS1ForTag(code string) bool {
-	rfidCheckUrl := fmt.Sprintf("https://members.pumpingstationone.org/rfid/check/FrontDoor/%s", code)
-	resp, err := http.Get(rfidCheckUrl)
+	rfidCheckURL := fmt.Sprintf("%s/%s", r.cfg.RFIDurl, code)
+	resp, err := http.Get(rfidCheckURL)
 	if err != nil {
-		log.Printf("Unable to access %s for this reason: %+v", rfidCheckUrl, err)
+		log.Printf("Unable to access %s for this reason: %+v", rfidCheckURL, err)
 		return false
 	}
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		// We got 200 back, so we're good to add this
 		// tag to the cache
 		r.addTagToCacheDB(code)
@@ -110,13 +114,12 @@ func (r Robot) checkPS1ForTag(code string) bool {
 		log.Printf("%s found in the database and added to cache.", code)
 		return true
 	}
-	if resp.StatusCode == 403 {
+	if resp.StatusCode == http.StatusForbidden {
 		log.Printf("%s tried to scan in, but mebership was expired.", code)
 		return false
-	} else {
-		log.Printf("%s tried to scan in, but code was not found.", code)
-		return false
 	}
+	log.Printf("%s tried to scan in but encountered status %s", code, http.StatusText(resp.StatusCode))
+	return false
 }
 
 func (r Robot) checkCacheDBForTag(tag string) bool {
